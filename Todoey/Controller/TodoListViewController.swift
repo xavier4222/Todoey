@@ -15,11 +15,15 @@ class TodoListViewController: UITableViewController {
     
     let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
     
+    var selectedCategory: Category? {
+        didSet{
+            loadItems()
+        }
+    }
 
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        loadItems()
         print(FileManager.default.urls(for: .documentDirectory, in: .userDomainMask))
     }
     
@@ -49,7 +53,6 @@ class TodoListViewController: UITableViewController {
         
         context.delete(itemArray[indexPath.row])
         itemArray.remove(at: indexPath.row)
-        
         itemArray[indexPath.row].done = !itemArray[indexPath.row].done
         saveItems()
         
@@ -70,6 +73,7 @@ class TodoListViewController: UITableViewController {
             
             newItem.title = textField.text!
             newItem.done = false
+            newItem.parentCategory = self.selectedCategory
             self.itemArray.append(newItem)
             self.saveItems()
             
@@ -100,7 +104,15 @@ class TodoListViewController: UITableViewController {
     //external paramater is 'with' and internal is request
     //meaning to access this methods parameter use with
     //and inside of this paramatar it would use the word request
-    func loadItems (with request: NSFetchRequest<Item> = Item.fetchRequest()) {
+    func loadItems (with request: NSFetchRequest<Item> = Item.fetchRequest(), predicate: NSPredicate? = nil) {
+        
+        let categoryPredicate = NSPredicate(format: "parentCategory.name MATCHES %@", selectedCategory!.name!)
+        
+        if let additionalPredicate = predicate {
+            request.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [categoryPredicate, additionalPredicate])
+        } else{
+            request.predicate = categoryPredicate
+        }
         
         do {
             itemArray = try context.fetch(request)
@@ -116,11 +128,14 @@ class TodoListViewController: UITableViewController {
 
 extension TodoListViewController: UISearchBarDelegate {
     func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
+        //make a reques
         let request: NSFetchRequest<Item> = Item.fetchRequest()
-        request.predicate = NSPredicate(format: "title CONTAINS[cd] %@", searchBar.text!)
+        //do the query search
+        let predicate = NSPredicate(format: "title CONTAINS[cd] %@", searchBar.text!)
+        //put the items in alphabetacal order
         request.sortDescriptors = [NSSortDescriptor(key: "title", ascending: true)]
     
-        loadItems(with: request)
+        loadItems(with: request, predicate: predicate)
         
     }
     
