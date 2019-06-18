@@ -55,11 +55,25 @@ class TodoListViewController: UITableViewController {
     //tableView Delegate Method
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         
+        
+        if let item = todoItems?[indexPath.row] {
+            do {
+                try realm.write {
+                    item.done = !item.done
+                }
+            }catch {
+                print(error)
+            }
+            
+        }
+        tableView.reloadData()
 //        context.delete(itemArray[indexPath.row])
 //        itemArray.remove(at: indexPath.row)
 //        todoItems?[indexPath.row].done = !todoItems[indexPath.row].done
 //        saveItems()
         
+        tableView.deselectRow(at: indexPath, animated: true)
+//
     }
     
     //MARK - ADD NEW ITEMS
@@ -78,6 +92,9 @@ class TodoListViewController: UITableViewController {
                     try self.realm.write {
                         let newItem = Item()
                         newItem.title = textField.text!
+                        let formatter = DateFormatter()
+                        formatter.dateFormat = "dd.MM.yyyy"
+                        newItem.date = Date()
                         currentCategory.items.append(newItem)
                     }
                 }catch {
@@ -85,10 +102,7 @@ class TodoListViewController: UITableViewController {
                 }
             }
         self.tableView.reloadData()
-            
-            
-            
-            
+       
            
         }
         
@@ -116,27 +130,26 @@ class TodoListViewController: UITableViewController {
 
 }
 
-//extension TodoListViewController: UISearchBarDelegate {
-//    func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
-//        //make a reques
-//        let request: NSFetchRequest<Item> = Item.fetchRequest()
-//        //do the query search
-//        let predicate = NSPredicate(format: "title CONTAINS[cd] %@", searchBar.text!)
-//        //put the items in alphabetacal order
-//        request.sortDescriptors = [NSSortDescriptor(key: "title", ascending: true)]
-//
-//        loadItems(with: request, predicate: predicate)
-//
-//    }
-//
-//    func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
-//        if searchBar.text?.count == 0 {
-//            loadItems()
-//            DispatchQueue.main.async {
-//                searchBar.resignFirstResponder()
-//            }
-//
-//        }
-//    }
-//
-//}
+extension TodoListViewController: UISearchBarDelegate {
+    
+    func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
+        
+        todoItems = todoItems?.filter("title CONTAINS[cd] %@", searchBar.text!).sorted(byKeyPath: "date", ascending: true)
+        tableView.reloadData()
+
+    }
+
+    
+    func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
+        
+        
+        if searchBar.text?.count == 0 {
+            loadItems()
+            DispatchQueue.main.async {
+                searchBar.resignFirstResponder()
+            }
+
+        }
+    }
+
+}
